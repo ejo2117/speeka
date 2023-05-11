@@ -14,45 +14,74 @@ type Bead = {
   radius: number;
 };
 
+type Ring = {
+  radius: number;
+  beads: Bead[];
+};
+
 const Canvas = ({ height = 400, width = 400, scale }: CanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const { spacing, ringRadius } = useControls({
+  const { spacing, outerRingRadius, numRings, beadRadius } = useControls({
     spacing: 10 * scale,
-    ringRadius: width,
+    outerRingRadius: width,
+    numRings: 3,
+    beadRadius: 5,
   });
 
   const canvasCenterX = (scale * width) / 2;
   const canvasCenterY = (scale * height) / 2;
 
-  const angle = 2 * Math.asin(spacing / (2 * ringRadius));
-  const numPoints = Math.floor((2 * Math.PI) / angle);
+  const createBeadRing = useCallback(
+    (ringRadius: number) => {
+      const ringPoints = [] as Bead[];
+      const angle = 2 * Math.asin(spacing / (2 * ringRadius));
+      const numPoints = Math.floor((2 * Math.PI) / angle);
+      for (let i = 0; i < numPoints; i++) {
+        ringPoints.push({
+          x:
+            canvasCenterX +
+            ringRadius * Math.cos((i * 2 * Math.PI) / numPoints),
+          y:
+            canvasCenterY +
+            ringRadius * Math.sin((i * 2 * Math.PI) / numPoints),
+          radius: beadRadius,
+        });
+      }
+      return ringPoints;
+    },
+    [canvasCenterX, canvasCenterY, spacing, beadRadius]
+  );
 
-  const beadRing = useMemo(() => {
-    const ringPoints = [] as Bead[];
-    for (let i = 0; i < numPoints; i++) {
-      ringPoints.push({
-        x: canvasCenterX + ringRadius * Math.cos((i * 2 * Math.PI) / numPoints),
-        y: canvasCenterY + ringRadius * Math.sin((i * 2 * Math.PI) / numPoints),
-        radius: 5,
-      });
+  const ringLayers = useMemo(() => {
+    const rings = [] as Ring[];
+
+    for (let i = 0; i < numRings; i++) {
+      const radius = outerRingRadius - i * (outerRingRadius / numRings);
+      rings.push({ radius, beads: createBeadRing(radius) });
     }
-    return ringPoints;
-  }, [canvasCenterX, canvasCenterY, numPoints, ringRadius]);
+
+    return rings;
+  }, [createBeadRing, numRings, outerRingRadius]);
 
   const draw = useCallback(() => {
     if (!canvasRef.current) return;
 
-    const context = canvasRef.current.getContext("2d")!;
+    const context = canvasRef.current.getContext("2d");
+
+    // Wipe the canvas on every frame update
     context.clearRect(0, 0, height * scale, width * scale);
 
-    for (const { x, y, radius: r } of beadRing) {
-      context.beginPath();
-      context.arc(x + r, y + r, r, 0, 2 * Math.PI);
-      context.fillStyle = "#fff";
-      context.fill();
+    // Iterate over each layer, and draw each bead within that layer
+    for (const { beads } of ringLayers) {
+      for (const { x, y, radius: r } of beads) {
+        context.beginPath();
+        context.arc(x + r, y + r, r, 0, 2 * Math.PI);
+        context.fillStyle = "#fff";
+        context.fill();
+      }
     }
-  }, [beadRing]);
+  }, [height, ringLayers, scale, width]);
 
   useAnimationFrame((time) => {
     draw();

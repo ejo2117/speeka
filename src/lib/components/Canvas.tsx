@@ -22,12 +22,14 @@ type Ring = {
 const Canvas = ({ height = 400, width = 400, scale }: CanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const { spacing, outerRingRadius, numRings, beadRadius } = useControls({
-    spacing: 10 * scale,
-    outerRingRadius: width,
-    numRings: 3,
-    beadRadius: 5,
-  });
+  const { spacing, outerRingRadius, numRings, beadRadius, drawCenterBead } =
+    useControls({
+      spacing: 10 * scale,
+      outerRingRadius: width,
+      numRings: 3,
+      beadRadius: 5,
+      drawCenterBead: true,
+    });
 
   const canvasCenterX = (scale * width) / 2;
   const canvasCenterY = (scale * height) / 2;
@@ -76,12 +78,28 @@ const Canvas = ({ height = 400, width = 400, scale }: CanvasProps) => {
     for (const { beads } of ringLayers) {
       for (const { x, y, radius: r } of beads) {
         context.beginPath();
-        context.arc(x + r, y + r, r, 0, 2 * Math.PI);
-        context.fillStyle = "#fff";
+        context.arc(x, y, r, 0, 2 * Math.PI);
+        context.fillStyle = "#000";
         context.fill();
       }
     }
-  }, [height, ringLayers, scale, width]);
+
+    if (drawCenterBead) {
+      context.beginPath();
+      context.arc(canvasCenterX, canvasCenterY, beadRadius, 0, 2 * Math.PI);
+      context.fillStyle = "#000";
+      context.fill();
+    }
+  }, [
+    beadRadius,
+    canvasCenterX,
+    canvasCenterY,
+    drawCenterBead,
+    height,
+    ringLayers,
+    scale,
+    width,
+  ]);
 
   useAnimationFrame((time) => {
     draw();

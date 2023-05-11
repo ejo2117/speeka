@@ -18,7 +18,7 @@ const Canvas = ({ height = 400, width = 400, scale }: CanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const { spacing, ringRadius } = useControls({
-    spacing: 10,
+    spacing: 10 * scale,
     ringRadius: width,
   });
 

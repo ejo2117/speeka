@@ -1,16 +1,8 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "/vite.svg";
 import "./App.css";
+import Canvas from "./lib/components/Canvas";
 
 function App() {
-  const [count, setCount] = useState(0);
-
-  return (
-    <>
-      <h1>Vite + React</h1>
-    </>
-  );
+  return <Canvas height={400} width={400} scale={3} />;
 }
 
 export default App;

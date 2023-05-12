@@ -60,5 +60,11 @@ button:focus-visible {
 }
 
 canvas {
-  border: 1px solid black;
+  border: 1px solid white;
+}
+
+@media (prefers-color-scheme: light) {
+  canvas {
+    border: 1px solid black;
+  }
 }

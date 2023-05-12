@@ -117,20 +117,26 @@ const Canvas = ({ height = 400, width = 400, scale }: CanvasProps) => {
 
       // Iterate over each layer, and draw each bead within that layer
       for (const { beads } of ringLayers) {
-        for (const { x, y, move } of beads) {
+        for (const { x, y, radius: defaultRadius, move } of beads) {
+          const radius = animationRunning ? move(t).radius : defaultRadius;
+
           context.beginPath();
-          context.arc(x, y, move(t).radius, 0, 2 * Math.PI);
+          context.arc(x, y, radius, 0, 2 * Math.PI);
           context.fillStyle = beadColor;
           context.fill();
         }
       }
 
       if (drawCenterBead) {
+        const centerBeadRadius = animationRunning
+          ? generateMovement(beadRadius, 0)(t).radius
+          : beadRadius;
+
         context.beginPath();
         context.arc(
           canvasCenterX,
           canvasCenterY,
-          generateMovement(beadRadius, 0)(t).radius,
+          centerBeadRadius,
           0,
           2 * Math.PI
         );
@@ -139,15 +145,16 @@ const Canvas = ({ height = 400, width = 400, scale }: CanvasProps) => {
       }
     },
     [
-      beadRadius,
-      canvasCenterX,
-      canvasCenterY,
-      drawCenterBead,
       height,
-      ringLayers,
       scale,
       width,
+      drawCenterBead,
+      ringLayers,
+      animationRunning,
       beadColor,
+      canvasCenterX,
+      canvasCenterY,
+      beadRadius,
     ]
   );
 
@@ -158,7 +165,7 @@ const Canvas = ({ height = 400, width = 400, scale }: CanvasProps) => {
 
     draw((time - animationStart.current) / 1000);
     lastAnimationTimestamp.current = time;
-  }, animationRunning);
+  });
 
   return (
     <div style={{ display: "flex", flexDirection: "column" }}>

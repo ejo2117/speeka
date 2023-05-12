@@ -58,12 +58,11 @@ const Canvas = ({ height = 400, width = 400, scale }: CanvasProps) => {
   // Ensures smooth animation
   // Define Bead updates here as a function of time
   // From the greatest StackOverflow answer of all time: https://stackoverflow.com/questions/66802877/change-speed-of-request-animation-frame
-  const generateMovement =
-    (r: number, i: number, i2: number) => (t: number) => {
-      return {
-        radius: Math.abs(Math.sin(t - (i % 31) - (i2 % 4)) * r),
-      };
+  const generateMovement = (r: number, i: number) => (t: number) => {
+    return {
+      radius: Math.abs(Math.sin(t - (i % 31)) * r),
     };
+  };
 
   // Creates each Bead for a given Ring. "useCallback" keeps this in sync with Leva values
   const createBeadRing = useCallback(
@@ -87,7 +86,7 @@ const Canvas = ({ height = 400, width = 400, scale }: CanvasProps) => {
             ringRadius * Math.sin((i * 2 * Math.PI) / numPoints),
           radius: beadRadius,
           // Movement function is defined at Bead creation, to be invoked later
-          move: generateMovement(beadRadius, i, ringIndex),
+          move: generateMovement(beadRadius, i),
         });
       }
       return ringPoints;

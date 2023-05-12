@@ -13,6 +13,7 @@ type Bead = {
   y: number;
   radius: number;
   move: (t: number) => Partial<Bead>;
+  color: `#${string}`;
 };
 
 type Ring = {
@@ -24,8 +25,6 @@ const Canvas = ({ height = 400, width = 400, scale }: CanvasProps) => {
   // Create a ref so we can interact with the canvas element
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationStart = useRef(performance.now());
-  const lastAnimationTimestamp = useRef<number>(null);
-  const elapsedTime = useRef<number>(0);
 
   // Stateful params all get controlled by Leva
   // Lets us update params live in the browser, but locks us into React
@@ -36,13 +35,15 @@ const Canvas = ({ height = 400, width = 400, scale }: CanvasProps) => {
     beadRadius,
     drawCenterBead,
     animationRunning,
+    rotation,
   } = useControls({
-    spacing: 10 * scale,
+    spacing: 20 * scale,
     outerRingRadius: width,
-    numRings: 3,
-    beadRadius: 5,
+    numRings: 5,
+    beadRadius: 15,
     drawCenterBead: true,
     animationRunning: true,
+    rotation: 0,
   });
 
   // Get center coordinates
@@ -58,11 +59,19 @@ const Canvas = ({ height = 400, width = 400, scale }: CanvasProps) => {
   // Ensures smooth animation
   // Define Bead updates here as a function of time
   // From the greatest StackOverflow answer of all time: https://stackoverflow.com/questions/66802877/change-speed-of-request-animation-frame
-  const generateMovement = (r: number, i: number) => (t: number) => {
-    return {
-      radius: Math.abs(Math.sin(t - (i % 31)) * r),
-    };
-  };
+  const generateMovement = useCallback(
+    (r: number, i: number, x?: number, y?: number) => (t: number) => {
+      const { abs, cos, sin, sqrt, tan } = Math;
+
+      const level = sin(t);
+
+      return {
+        radius: abs(level * r),
+        color: level < 0 ? "#080593" : beadColor,
+      } as Partial<Bead>;
+    },
+    [beadColor]
+  );
 
   // Creates each Bead for a given Ring. "useCallback" keeps this in sync with Leva values
   const createBeadRing = useCallback(
@@ -74,24 +83,34 @@ const Canvas = ({ height = 400, width = 400, scale }: CanvasProps) => {
       // Gives us the number of points that fit on the Ring's edge
       const numPoints = Math.floor((2 * Math.PI) / angle);
       // Changes where we start drawing on the Ring
-      const startingAngle = 0.25 * (2 * Math.PI) * ringIndex;
+      const startingAngle = rotation * (2 * Math.PI) * ringIndex;
 
       for (let i = 0 + startingAngle; i < numPoints + startingAngle; i++) {
+        const position = [
+          canvasCenterX + ringRadius * Math.cos((i * 2 * Math.PI) / numPoints),
+          canvasCenterY + ringRadius * Math.sin((i * 2 * Math.PI) / numPoints),
+        ];
+
         ringPoints.push({
-          x:
-            canvasCenterX +
-            ringRadius * Math.cos((i * 2 * Math.PI) / numPoints),
-          y:
-            canvasCenterY +
-            ringRadius * Math.sin((i * 2 * Math.PI) / numPoints),
+          x: position[0],
+          y: position[1],
           radius: beadRadius,
           // Movement function is defined at Bead creation, to be invoked later
-          move: generateMovement(beadRadius, i),
+          move: generateMovement(beadRadius, i, position[0], position[1]),
+          color: beadColor,
         });
       }
       return ringPoints;
     },
-    [beadRadius, canvasCenterX, canvasCenterY, spacing]
+    [
+      beadColor,
+      beadRadius,
+      canvasCenterX,
+      canvasCenterY,
+      generateMovement,
+      rotation,
+      spacing,
+    ]
   );
 
   // Creates each Ring that will be rendered to the Canvas. "useMemo" keeps this in sync with Leva values
@@ -107,7 +126,7 @@ const Canvas = ({ height = 400, width = 400, scale }: CanvasProps) => {
   }, [createBeadRing, numRings, outerRingRadius]);
 
   const draw = useCallback(
-    (t) => {
+    (t: number) => {
       if (!canvasRef.current) return;
 
       const context = canvasRef.current.getContext("2d");
@@ -118,11 +137,15 @@ const Canvas = ({ height = 400, width = 400, scale }: CanvasProps) => {
       // Iterate over each layer, and draw each bead within that layer
       for (const { beads } of ringLayers) {
         for (const { x, y, radius: defaultRadius, move } of beads) {
-          const radius = animationRunning ? move(t).radius : defaultRadius;
+          const { radius, color } = animationRunning
+            ? move(t)
+            : { radius: defaultRadius, color: beadColor };
+
+          // const radius = animationRunning ? move(t).radius : defaultRadius;
 
           context.beginPath();
           context.arc(x, y, radius, 0, 2 * Math.PI);
-          context.fillStyle = beadColor;
+          context.fillStyle = color;
           context.fill();
         }
       }
@@ -140,7 +163,7 @@ const Canvas = ({ height = 400, width = 400, scale }: CanvasProps) => {
           0,
           2 * Math.PI
         );
-        context.fillStyle = beadColor;
+        context.fillStyle = generateMovement(beadRadius, 0)(t).color;
         context.fill();
       }
     },
@@ -151,20 +174,16 @@ const Canvas = ({ height = 400, width = 400, scale }: CanvasProps) => {
       drawCenterBead,
       ringLayers,
       animationRunning,
-      beadColor,
+      generateMovement,
+      beadRadius,
       canvasCenterX,
       canvasCenterY,
-      beadRadius,
+      beadColor,
     ]
   );
 
   useAnimationFrame((time) => {
-    if (!lastAnimationTimestamp.current) {
-      lastAnimationTimestamp.current = time;
-    }
-
     draw((time - animationStart.current) / 1000);
-    lastAnimationTimestamp.current = time;
   });
 
   return (

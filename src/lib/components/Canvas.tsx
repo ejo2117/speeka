@@ -36,6 +36,8 @@ const Canvas = ({ height = 400, width = 400, scale }: CanvasProps) => {
     drawCenterBead,
     animationRunning,
     rotation,
+    color1,
+    color2,
   } = useControls({
     spacing: 20 * scale,
     outerRingRadius: width,
@@ -44,6 +46,8 @@ const Canvas = ({ height = 400, width = 400, scale }: CanvasProps) => {
     drawCenterBead: true,
     animationRunning: true,
     rotation: 0,
+    color1: "#000",
+    color2: "#080593",
   });
 
   // Get center coordinates
@@ -60,17 +64,18 @@ const Canvas = ({ height = 400, width = 400, scale }: CanvasProps) => {
   // Define Bead updates here as a function of time
   // From the greatest StackOverflow answer of all time: https://stackoverflow.com/questions/66802877/change-speed-of-request-animation-frame
   const generateMovement = useCallback(
-    (r: number, i: number, x?: number, y?: number) => (t: number) => {
-      const { abs, cos, sin, sqrt, tan } = Math;
+    (r: number, i: number, x?: number, y?: number, ring?: number) =>
+      (t: number) => {
+        const { abs, cos, sin, sqrt, tan, min, log } = Math;
 
-      const level = sin(t);
+        const level = sin(log(i + 2) * t);
 
-      return {
-        radius: abs(level * r),
-        color: level < 0 ? "#080593" : beadColor,
-      } as Partial<Bead>;
-    },
-    [beadColor]
+        return {
+          radius: abs(level * r),
+          color: level < 0 ? color2 : color1,
+        } as Partial<Bead>;
+      },
+    [color1, color2]
   );
 
   // Creates each Bead for a given Ring. "useCallback" keeps this in sync with Leva values
@@ -96,7 +101,13 @@ const Canvas = ({ height = 400, width = 400, scale }: CanvasProps) => {
           y: position[1],
           radius: beadRadius,
           // Movement function is defined at Bead creation, to be invoked later
-          move: generateMovement(beadRadius, i, position[0], position[1]),
+          move: generateMovement(
+            beadRadius,
+            i,
+            position[0],
+            position[1],
+            ringIndex
+          ),
           color: beadColor,
         });
       }
